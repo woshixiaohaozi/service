@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!-- 角色 Mapper 自定义 SQL：演示联表查询与动态 SQL。 -->
+<mapper namespace="com.example.system.mapper.SysRoleMapper">
+
+    <!-- 根据用户 ID 查角色：用户-角色关联表 INNER JOIN 角色表。 -->
+    <select id="selectRolesByUserId" resultType="com.example.system.entity.SysRole">
+        SELECT r.id, r.role_name, r.role_key, r.sort, r.status, r.remark,
+               r.create_by, r.create_time, r.update_by, r.update_time, r.deleted
+        FROM sys_user_role ur
+        INNER JOIN sys_role r ON r.id = ur.role_id AND r.deleted = 0
+        WHERE ur.user_id = #{userId}
+          AND ur.deleted = 0
+          AND r.status = 1
+        ORDER BY r.sort ASC
+    </select>
+
+</mapper>

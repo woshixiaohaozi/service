@@ -1,0 +1,30 @@
+# base-job 模块定时任务配置示例
+#
+# 使用方式：在 base-admin 的 application.yml（或对应 profile 文件）中通过
+#   spring:
+#     profiles:
+#       include: job
+# 引入本文件，使以下配置生效。本文件独立成 profile，便于按环境统一启停任务。
+#
+# 所有开关均使用 Spring 的 @ConditionalOnProperty 绑定到任务类 / 配置类：
+# - matchIfMissing = true 的配置项在未显式声明时视为开启；
+# - havingValue = "true" 的配置项必须显式为 true 才开启，缺省视为关闭。
+
+job:
+  # 调度器总开关：对应 SchedulingConfig 上的 @ConditionalOnProperty。
+  # 设为 false 时，@EnableScheduling 与整个调度配置不生效，所有定时任务都不会注册；
+  # 适合在单元测试、本地调试等不希望后台任务运行的场景关闭。
+  scheduling:
+    enabled: true
+
+  # 示例心跳任务开关：对应 DemoTask。
+  # 该任务每 10 秒打印一次带 traceId 的日志，仅用于演示，默认关闭（false）；
+  # 需要观察任务运行时再显式改为 true，避免生产环境产生无意义日志。
+  demo:
+    enabled: false
+
+  # 数据清理任务开关：对应 DataCleanupTask。
+  # 这是一个业务向任务示例（当前为日志占位），默认开启（true）；
+  # 若接入真实清理逻辑后需要灰度，可先设为 false 再逐步放开。
+  cleanup:
+    enabled: true

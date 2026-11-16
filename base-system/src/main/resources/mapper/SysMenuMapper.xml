@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!--
+  SysMenuMapper 的自定义 SQL。
+  引入方式：application.yml 中 mybatis-plus.mapper-locations 指向本目录。
+  命名空间必须等于 Mapper 接口全限定名，id 必须等于接口方法名。
+-->
+<mapper namespace="com.example.system.mapper.SysMenuMapper">
+
+    <!--
+      SQL 片段：可复用的查询列。用 <sql> 定义，用 <include> 引用，
+      避免多出重复书写相同字段。
+    -->
+    <sql id="Base_Column_List">
+        id, menu_name, parent_id, sort, path, component, icon,
+        permission, menu_type, visible, status, create_by, create_time,
+        update_by, update_time, deleted
+    </sql>
+
+    <!--
+      三表联查：user -> user_role -> role_menu -> menu。
+      查询某用户拥有的全部权限标识，用于登录时加载权限集合。
+      DISTINCT 去重：同一权限可能通过多个角色重复授予。
+      #{userId} 是预编译占位符，能有效防止 SQL 注入（禁止使用 ${} 拼接用户输入）。
+    -->
+    <select id="selectPermissionsByUserId" resultType="java.lang.String">
+        SELECT DISTINCT m.permission
+        FROM sys_user_role ur
+        INNER JOIN sys_role_menu rm ON rm.role_id = ur.role_id AND rm.deleted = 0
+        INNER JOIN sys_menu m ON m.id = rm.menu_id AND m.deleted = 0
+        WHERE ur.user_id = #{userId}
+          AND ur.deleted = 0
+          AND m.status = 1
+          AND m.permission IS NOT NULL
+          AND m.permission &lt;&gt; ''
+    </select>
+
+    <!--
+      动态 SQL <foreach> 示例：根据多个角色 ID 批量查权限。
+      collection="roleIds" 对应 @Param("roleIds") 注解的参数名。
+      open/separator/close 负责拼出 IN (?, ?, ?)。
+    -->
+    <select id="selectPermissionsByRoleIds" resultType="java.lang.String">
+        SELECT DISTINCT permission
+        FROM sys_menu
+        WHERE deleted = 0
+          AND status = 1
+          AND permission IS NOT NULL
+        <if test="roleIds != null and roleIds.size() > 0">
+            AND id IN (
+                SELECT rm.menu_id
+                FROM sys_role_menu rm
+                WHERE rm.deleted = 0
+                  AND rm.role_id IN
+                <foreach collection="roleIds" item="roleId" open="(" separator="," close=")">
+                    #{roleId}
+                </foreach>
+            )
+        </if>
+    </select>
+
+</mapper>
