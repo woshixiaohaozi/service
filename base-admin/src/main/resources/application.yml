@@ -38,3 +38,29 @@ logging:
     com.example: debug
   pattern:
     console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] [%X{traceId}] %-5level %logger{36} - %msg%n"
+
+# ============================================================
+# 安全白名单配置
+# ============================================================
+security:
+  # 免登录白名单：这些路径无需 JWT 即可访问（支持 Ant 风格通配符）
+  # 注意：仅放开 URL 认证，Controller 上的 @PreAuthorize 注解鉴权仍生效
+  ignore-urls:
+    - /auth/login
+    - /auth/current-user
+    - /doc.html
+    - /swagger-ui/**
+    - /v3/api-docs/**
+    - /webjars/**
+    - /error
+    - /public/**
+    - /actuator/health
+  # POST 约束白名单：这些路径允许 GET/DELETE 等非 POST 方法
+  # 默认全站仅允许 POST，需要开放 GET 的接口在此添加
+  allow-method-urls:
+    - /doc.html
+    - /swagger-ui/**
+    - /v3/api-docs/**
+    - /webjars/**
+    - /error
+    - /actuator/**

@@ -1,6 +1,7 @@
 package com.example.framework.config;
 
 import com.example.framework.security.JwtAuthenticationFilter;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -23,27 +24,27 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
  * <ol>
  *   <li>配置 DaoAuthenticationProvider：查库加载用户 + BCrypt 校验密码；</li>
  *   <li>暴露 AuthenticationManager 供登录接口调用；</li>
- *   <li>无状态会话 + JWT 过滤器，白名单放行登录与文档；</li>
- *   <li>自定义 401/403 响应，返回统一错误码结构。</li>
+ *   <li>从 {@link SecurityProperties} 读取免登录白名单，不再硬编码路径；</li>
+ *   <li>无状态会话 + JWT 过滤器，自定义 401/403 统一错误响应。</li>
  * </ol>
  */
 @Configuration
 @EnableMethodSecurity
+@EnableConfigurationProperties(SecurityProperties.class)
 public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtFilter;
     private final UserDetailsService userDetailsService;
+    private final SecurityProperties securityProperties;
 
-    public SecurityConfig(JwtAuthenticationFilter jwtFilter, UserDetailsService userDetailsService) {
+    public SecurityConfig(JwtAuthenticationFilter jwtFilter, UserDetailsService userDetailsService,
+                          SecurityProperties securityProperties) {
         this.jwtFilter = jwtFilter;
         this.userDetailsService = userDetailsService;
+        this.securityProperties = securityProperties;
     }
 
-    /**
-     * DaoAuthenticationProvider 是"登录走数据库验证"的核心：
-     * 它调用 UserDetailsService（本项目为 SysUserDetailsService）查库加载用户，
-     * 再用 PasswordEncoder（BCrypt）比对密码。
-     */
+    /** DaoAuthenticationProvider：调用 UserDetailsService 查库 + BCrypt 比对密码。 */
     @Bean
     public DaoAuthenticationProvider daoAuthenticationProvider() {
         DaoAuthenticationProvider provider = new DaoAuthenticationProvider();
@@ -58,22 +59,27 @@ public class SecurityConfig {
         return new ProviderManager(daoAuthenticationProvider());
     }
 
-    /** BCrypt 单向哈希加密，每次加密自动加盐，相同明文结果也不同。 */
+    /** BCrypt 单向哈希加密，每次加密自动加盐。 */
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
     }
 
-    /** 过滤链：白名单放行 + 其余需认证 + JWT 过滤器 + 统一异常响应。 */
+    /**
+     * 过滤链：按配置放行免登录白名单，其余请求一律需要认证。
+     * 白名单为空时不调用 requestMatchers，避免 Spring Security 因空数组报错。
+     */
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
             .csrf(AbstractHttpConfigurer::disable)
             .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-            .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/doc.html", "/swagger-ui/**", "/v3/api-docs/**",
-                                 "/webjars/**", "/auth/login", "/error").permitAll()
-                .anyRequest().authenticated())
+            .authorizeHttpRequests(auth -> {
+                if (!securityProperties.getIgnoreUrls().isEmpty()) {
+                    auth.requestMatchers(securityProperties.getIgnoreUrls().toArray(String[]::new)).permitAll();
+                }
+                auth.anyRequest().authenticated();
+            })
             .exceptionHandling(e -> e
                 .authenticationEntryPoint((req, res, ex) -> {
                     res.setStatus(401);

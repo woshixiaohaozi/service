@@ -13,9 +13,7 @@ import java.util.List;
 
 /**
  * 权限管理聚合服务：负责角色分配与权限查询。
- *
- * <p>把跨多张表的写操作放在一个 Service 中，用 @Transactional 保证原子性，
- * 避免出现“删了旧关联但插入新关联失败”的中间状态。</p>
+ * 跨多张表的写操作用 @Transactional 保证原子性。
  */
 @Service
 @RequiredArgsConstructor
@@ -31,15 +29,17 @@ public class SysPermissionService {
         return roleMapper.selectRolesByUserId(userId);
     }
 
+    /** 查询用户拥有的角色 ID 列表（前端回显勾选）。 */
+    public List<Long> listRoleIdsByUser(Long userId) {
+        return new ArrayList<>(userRoleMapper.selectRoleIdsByUserId(userId));
+    }
+
     /** 查询用户拥有的权限标识列表。 */
     public List<String> listPermissionsByUser(Long userId) {
         return menuMapper.selectPermissionsByUserId(userId);
     }
 
-    /**
-     * 为用户重新分配角色：先物理删除旧关联，再批量插入新关联。
-     * @Transactional 保证两步要么都成功、要么都回滚。
-     */
+    /** 为用户重新分配角色：先物理删除旧关联，再批量插入新关联。 */
     @Transactional(rollbackFor = Exception.class)
     public void assignRoles(Long userId, List<Long> roleIds) {
         userRoleMapper.deleteByUserId(userId);
@@ -48,9 +48,7 @@ public class SysPermissionService {
         }
     }
 
-    /**
-     * 为角色重新分配菜单权限：先删后插，保证权限变更原子性。
-     */
+    /** 为角色重新分配菜单权限：先删后插。 */
     @Transactional(rollbackFor = Exception.class)
     public void assignMenus(Long roleId, List<Long> menuIds) {
         roleMenuMapper.deleteByRoleId(roleId);

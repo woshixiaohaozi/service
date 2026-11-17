@@ -4,22 +4,8 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 
 /**
- * 全局错误码枚举，集中定义系统所有的业务状态码及其默认提示信息。
- *
- * <p>设计意图：把散落在各处的"魔法数字 + 文案"收敛为枚举，
- * 保证同一个错误在所有接口中的 code 与 message 完全一致，便于前端按码处理。
- *
- * <p>错误码分段约定（按量级区分错误来源，方便监控系统按段聚合）：
- * <ul>
- *     <li>0：成功</li>
- *     <li>1xxxx：参数校验错误</li>
- *     <li>2xxxx：业务逻辑错误</li>
- *     <li>4xxxx：认证与授权错误</li>
- *     <li>5xxxx：系统内部错误</li>
- * </ul>
- *
- * <p>使用场景：构造 {@code Result.fail(ErrorCode)}、抛出 {@code BusinessException(ErrorCode)}，
- * 以及全局异常处理器选择返回码时，均应引用本枚举而非自定义数字。
+ * 全局错误码枚举。
+ * 分段：0 成功 / 1xxxx 参数 / 2xxxx 业务 / 4xxxx 认证授权 / 5xxxx 系统。
  */
 @Getter
 @AllArgsConstructor
@@ -51,6 +37,7 @@ public enum ErrorCode {
     FORBIDDEN(40300, "没有权限访问"),
     /** 用户名或密码校验失败 */
     LOGIN_FAILED(40101, "用户名或密码错误"),
+    USER_DISABLED(40102, "账号已被禁用，请联系管理员"),
 
     // ===== 系统错误 5xxxx：服务端未知异常，通常需要研发介入排查 =====
     /** 系统繁忙，对客户端隐藏具体异常细节 */

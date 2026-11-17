@@ -34,7 +34,7 @@ public class BaseEntity implements Serializable {
      * 主键 ID。采用 {@link IdType#ASSIGN_ID} 由 MyBatis-Plus 在插入前生成分布式 ID，
      * 不依赖数据库自增，便于分库分表与数据迁移。
      */
-    @TableId(type = IdType.ASSIGN_ID)
+    @TableId(type = IdType.AUTO)
     private Long id;
 
     /**

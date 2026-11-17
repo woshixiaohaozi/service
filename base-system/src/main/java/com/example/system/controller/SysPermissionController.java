@@ -6,6 +6,8 @@ import com.example.system.service.SysPermissionService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import lombok.AllArgsConstructor;
+import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -25,11 +27,26 @@ public class SysPermissionController {
 
     private final SysPermissionService permissionService;
 
+    /** 角色分配请求体（含菜单分配）。 */
+    @Data
+    @AllArgsConstructor
+    public static class AssignMenusRequest {
+        private Long roleId;
+        private List<Long> menuIds;
+    }
+
     @Operation(summary = "查询用户角色")
     @PostMapping("/roles")
     @PreAuthorize("hasAuthority('system:user:list')")
     public Result<?> roles(@RequestParam Long userId) {
         return Result.ok(permissionService.listRolesByUser(userId));
+    }
+
+    /** 查询用户角色 ID 列表（前端分配角色时回显勾选）。 */
+    @PostMapping("/user-role-ids")
+    @PreAuthorize("hasAuthority('system:user:list')")
+    public Result<List<Long>> userRoleIds(@RequestParam Long userId) {
+        return Result.ok(permissionService.listRoleIdsByUser(userId));
     }
 
     @Operation(summary = "查询用户权限标识")
@@ -52,5 +69,13 @@ public class SysPermissionController {
     @PreAuthorize("hasAuthority('system:role:list')")
     public Result<List<Long>> roleMenus(@RequestParam Long roleId) {
         return Result.ok(permissionService.listMenuIdsByRole(roleId));
+    }
+
+    /** 为角色分配菜单权限（先删后插，事务保证）。 */
+    @PostMapping("/assign-menus")
+    @PreAuthorize("hasAuthority('system:role:edit')")
+    public Result<Void> assignMenus(@RequestBody AssignMenusRequest request) {
+        permissionService.assignMenus(request.getRoleId(), request.getMenuIds());
+        return Result.ok();
     }
 }
